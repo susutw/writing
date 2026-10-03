@@ -74,5 +74,23 @@ const fontVars = `--body-font: '${body.name}'; --notes-font: '${notes.name}';`;
         {site.footer || `© ${new Date().getFullYear()} ${site.author}`}
       </footer>
     </div>
+    <script is:inline define:vars={{ base: url('/') }}>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register(base + 'sw.js', { scope: base }).catch(() => {});
+      }
+      // 從主畫面開啟時，切回 app 不會重新載入；離開超過一分鐘就自動重新整理
+      const standalone =
+        matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+      if (standalone) {
+        let hiddenAt = 0;
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) hiddenAt = Date.now();
+          else if (hiddenAt && Date.now() - hiddenAt > 60000) location.reload();
+        });
+        addEventListener('pageshow', (event) => {
+          if (event.persisted) location.reload();
+        });
+      }
+    </script>
   </body>
 </html>
