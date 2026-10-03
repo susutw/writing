@@ -11,16 +11,17 @@ if (!source) {
 
 // iOS 會把透明處填成黑色，所以先鋪上背景色（和網站底色一致）
 const background = process.argv[2] || '#f7f5f0';
-const sizes = [
-  ['apple-touch-icon.png', 180],
-  ['icon-192.png', 192],
-  ['icon-512.png', 512],
+// [輸出路徑, 尺寸, 四周留白比例]；瀏覽器分頁的 favicon 很小，留白少一點
+const outputs = [
+  ['public/icons/apple-touch-icon.png', 180, 0.1],
+  ['public/icons/icon-192.png', 192, 0.1],
+  ['public/icons/icon-512.png', 512, 0.1],
+  ['public/favicon.png', 64, 0.03],
 ];
 
 mkdirSync('public/icons', { recursive: true });
-// 圖片完整縮放進正方形（不裁切），四周留 10% 空白
-const padding = 0.1;
-for (const [name, size] of sizes) {
+// 圖片完整縮放進正方形（不裁切），四周留白
+for (const [file, size, padding] of outputs) {
   const inner = Math.round(size * (1 - padding * 2));
   const image = await sharp(source, { density: 300 })
     .resize(inner, inner, { fit: 'contain', background: '#0000' })
@@ -29,6 +30,6 @@ for (const [name, size] of sizes) {
     .composite([{ input: image, gravity: 'center' }])
     .flatten({ background })
     .png()
-    .toFile(`public/icons/${name}`);
-  console.log(`public/icons/${name}  ${size}x${size}`);
+    .toFile(file);
+  console.log(`${file}  ${size}x${size}`);
 }

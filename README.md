@@ -86,12 +86,12 @@ date: 2026-10-03T21:40:00+08:00
 
 任何內容加上 `draft: true` 就不會發布。
 
-## 加入主畫面的 icon
+## icon（主畫面與瀏覽器分頁）
 
 網站支援手機的「加入主畫面」，打開時不會有瀏覽器網址列。
 
 1. 準備一張圖片（建議至少 512×512，不是正方形也可以，會完整放進正方形、四周留白），命名為 `icon.png`、`icon.jpg` 或 `icon.svg`，放在專案根目錄，取代原本的 `icon.svg`。
-2. 執行 `npm run icons`，會在 `public/icons/` 產生 iPhone 與 Android 需要的尺寸。
+2. 執行 `npm run icons`，會產生 iPhone 與 Android 需要的尺寸（`public/icons/`），以及瀏覽器分頁的小圖示（`public/favicon.png`）。
 3. 在 `site.config.ts` 的 `app` 可以設定主畫面上顯示的名稱與狀態列顏色。
 
 iPhone 不支援透明背景，透明的地方會填上網站底色；想換底色可以執行 `npm run icons -- '#ffffff'`。
