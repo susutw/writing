@@ -1,11 +1,11 @@
 // 網站設定：使用這個模板時，主要只需要改這個檔案。
 export const site = {
-  title: '無題',
+  title: '坐在 4-1 的蘇同學',
   // 顯示在標題下方，可以換行
-  description: '一些字，一些照片。\n住在海邊的城市，喜歡散步。',
+  description: '寫一些日子、寫想法、寫新的發現。\n文字從單字堆積成文章，再變成你的獨一無二的輪廓。',
   // 頭貼：把圖片放在 public/ 資料夾，填上路徑；留空 '' 就不顯示
   avatar: '/avatar.svg',
-  author: '你的名字',
+  author: '蘇同學',
   lang: 'zh-Hant',
   // 所有日期時間都以這個時區顯示
   timeZone: 'Asia/Taipei',
