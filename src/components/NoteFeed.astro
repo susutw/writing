@@ -15,7 +15,7 @@ const rendered = await Promise.all(
     <ol class="feed">
       {rendered.map(({ note, Content }) => (
         <li id={note.id}>
-          <div class="prose note-text">
+          <div class="prose note-text" data-quote>
             <Content />
           </div>
           <a class="meta" href={url(`/notes/${note.id}/`)}>

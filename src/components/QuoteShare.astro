@@ -1,0 +1,308 @@
+---
+// 選取文字後產生引文圖片（IG 限時動態尺寸 1080×1920），可分享或下載。
+// 可選取的範圍要加上 data-quote；加上 data-quote-bg="圖片網址" 會用該圖片當底圖。
+import { site } from '../../site.config';
+import { url } from '../lib';
+---
+
+<div
+  id="quote-share"
+  hidden
+  data-font={site.fonts.notes.name}
+  data-title={site.title}
+  data-avatar={site.avatar ? url(site.avatar) : ''}
+  data-bg={site.app.themeColor}
+>
+</div>
+<button class="qs-trigger" type="button" hidden>做成圖片</button>
+<div class="qs-overlay" hidden>
+  <img class="qs-preview" alt="引文圖片預覽" />
+  <p class="qs-hint">也可以長按圖片儲存</p>
+  <div class="qs-actions">
+    <button type="button" data-act="share">分享</button>
+    <button type="button" data-act="save">下載</button>
+    <button type="button" data-act="close">關閉</button>
+  </div>
+</div>
+
+<style>
+  [hidden] {
+    display: none !important;
+  }
+  .qs-trigger {
+    position: fixed;
+    left: 50%;
+    bottom: calc(env(safe-area-inset-bottom) + 1.5rem);
+    z-index: 20;
+    transform: translateX(-50%);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+    padding: 0.4rem 0.9rem;
+    border: 0;
+    border-radius: 2px;
+    background: var(--fg);
+    color: var(--bg);
+    font: inherit;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+  }
+  .qs-trigger:disabled {
+    opacity: 0.6;
+  }
+  .qs-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: rgba(28, 27, 25, 0.94);
+    color: #f7f5f0;
+  }
+  .qs-preview {
+    max-width: 90vw;
+    max-height: 70vh;
+    box-shadow: 0 2px 24px rgba(0, 0, 0, 0.4);
+  }
+  .qs-hint {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #a8a49b;
+  }
+  .qs-actions {
+    display: flex;
+    gap: 1.75rem;
+  }
+  .qs-actions button {
+    padding: 0.3rem 0;
+    border: 0;
+    border-bottom: 1px solid transparent;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+  }
+  .qs-actions button:hover {
+    border-bottom-color: currentColor;
+  }
+</style>
+
+<script>
+  const W = 1080;
+  const H = 1920;
+  const PAD = 120;
+  // 不能出現在行首的標點，遇到時掛在上一行行尾
+  const NO_LINE_START = '，。、！？；：」』）》〉…—,.!?;:)]}%';
+
+  const cfg = document.getElementById('quote-share')!.dataset;
+  const trigger = document.querySelector<HTMLButtonElement>('.qs-trigger')!;
+  const overlay = document.querySelector<HTMLDivElement>('.qs-overlay')!;
+  const preview = overlay.querySelector<HTMLImageElement>('.qs-preview')!;
+  const shareButton = overlay.querySelector<HTMLButtonElement>('[data-act="share"]')!;
+
+  let selected: { text: string; bg?: string } | null = null;
+  let file: File | null = null;
+  let objectUrl = '';
+  let timer = 0;
+
+  function readSelection() {
+    const sel = getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return hideTrigger();
+    const range = sel.getRangeAt(0);
+    const node = range.commonAncestorContainer;
+    const el = node instanceof Element ? node : node.parentElement;
+    const box = el?.closest<HTMLElement>('[data-quote]');
+    const text = sel
+      .toString()
+      .replace(/\r/g, '')
+      .replace(/[ \t]*\n[ \t]*/g, '\n')
+      .replace(/\n{2,}/g, '\n')
+      .trim();
+    if (!box || !text) return hideTrigger();
+
+    selected = { text, bg: box.dataset.quoteBg };
+    trigger.hidden = false;
+  }
+
+  function hideTrigger() {
+    trigger.hidden = true;
+    selected = null;
+  }
+
+  document.addEventListener('selectionchange', () => {
+    clearTimeout(timer);
+    timer = window.setTimeout(readSelection, 250);
+  });
+
+  // 按下按鈕時不要讓選取範圍消失
+  trigger.addEventListener('pointerdown', (event) => event.preventDefault());
+  trigger.addEventListener('mousedown', (event) => event.preventDefault());
+
+  trigger.addEventListener('click', async () => {
+    if (!selected) return;
+    trigger.disabled = true;
+    trigger.textContent = '製作中';
+    try {
+      const blob = await render(selected);
+      showPreview(blob);
+    } catch (err) {
+      console.error(err);
+      alert('圖片製作失敗，請再試一次。');
+    } finally {
+      trigger.disabled = false;
+      trigger.textContent = '做成圖片';
+    }
+  });
+
+  function showPreview(blob: Blob) {
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(blob);
+    file = new File([blob], 'quote.png', { type: 'image/png' });
+    preview.src = objectUrl;
+    shareButton.hidden = !navigator.canShare?.({ files: [file] });
+    overlay.hidden = false;
+    trigger.hidden = true;
+  }
+
+  overlay.addEventListener('click', async (event) => {
+    const target = event.target as HTMLElement;
+    const act = target.dataset.act;
+    if (act === 'share' && file) {
+      try {
+        await navigator.share({ files: [file] });
+      } catch {
+        // 使用者取消分享
+      }
+    } else if (act === 'save') {
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = 'quote.png';
+      a.click();
+    } else if (act === 'close' || target === overlay) {
+      overlay.hidden = true;
+    }
+  });
+
+  async function loadImage(src: string) {
+    const img = new Image();
+    img.src = src;
+    await img.decode();
+    return img;
+  }
+
+  function drawCover(
+    ctx: CanvasRenderingContext2D,
+    img: HTMLImageElement,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+  ) {
+    const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+    const sw = w / scale;
+    const sh = h / scale;
+    ctx.drawImage(img, (img.naturalWidth - sw) / 2, (img.naturalHeight - sh) / 2, sw, sh, x, y, w, h);
+  }
+
+  // 中文逐字斷行，英文單字不拆開
+  function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
+    const lines: string[] = [];
+    for (const para of text.split('\n')) {
+      const tokens = para.match(/[A-Za-z0-9'’\-]+|\s+|./gu) ?? [];
+      let line = '';
+      for (const token of tokens) {
+        const next = line + token;
+        if (!line || ctx.measureText(next).width <= maxWidth || NO_LINE_START.includes(token[0])) {
+          line = next;
+          continue;
+        }
+        lines.push(line.trimEnd());
+        line = token.trimStart();
+      }
+      lines.push(line.trimEnd());
+    }
+    return lines;
+  }
+
+  async function render({ text, bg }: { text: string; bg?: string }) {
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d')!;
+    const family = `"${cfg.font}", serif`;
+    const title = cfg.title ?? '';
+
+    // 網頁字體依字元分批載入，先確保這次用到的字都下載好
+    await document.fonts.load(`64px ${family}`, text + title).catch(() => {});
+
+    let fg = '#2b2a28';
+    let sub = '#2b2a28';
+    if (bg) {
+      drawCover(ctx, await loadImage(bg), 0, 0, W, H);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.42)';
+      ctx.fillRect(0, 0, W, H);
+      fg = sub = '#ffffff';
+    } else {
+      ctx.fillStyle = cfg.bg || '#f7f5f0';
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // 引文：字太多時逐步縮小字級，仍放不下就截斷
+    const maxWidth = W - PAD * 2;
+    const maxHeight = H * 0.55;
+    let size = 64;
+    let lines: string[] = [];
+    for (;;) {
+      ctx.font = `${size}px ${family}`;
+      lines = wrap(ctx, text, maxWidth);
+      if (lines.length * size * 1.75 <= maxHeight || size <= 38) break;
+      size -= 4;
+    }
+    const lineHeight = size * 1.75;
+    const maxLines = Math.floor(maxHeight / lineHeight);
+    if (lines.length > maxLines) {
+      lines = lines.slice(0, maxLines);
+      lines[maxLines - 1] = lines[maxLines - 1].replace(/.$/u, '') + '⋯';
+    }
+    ctx.fillStyle = fg;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    let y = (H - lines.length * lineHeight) / 2 - 60 + lineHeight / 2;
+    for (const line of lines) {
+      ctx.fillText(line, PAD, y);
+      y += lineHeight;
+    }
+
+    // 右下角：網站名稱與頭貼（避開 IG 限動下方的操作區）
+    const avatarSize = 76;
+    const baseline = H - 280;
+    let x = W - PAD;
+    if (cfg.avatar) {
+      try {
+        const img = await loadImage(cfg.avatar);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x - avatarSize / 2, baseline, avatarSize / 2, 0, Math.PI * 2);
+        ctx.clip();
+        drawCover(ctx, img, x - avatarSize, baseline - avatarSize / 2, avatarSize, avatarSize);
+        ctx.restore();
+        x -= avatarSize + 24;
+      } catch {
+        // 頭貼載入失敗就只放名稱
+      }
+    }
+    ctx.font = `34px ${family}`;
+    ctx.fillStyle = sub;
+    ctx.textAlign = 'right';
+    ctx.fillText(title, x, baseline);
+
+    return new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('toBlob failed'))), 'image/png'),
+    );
+  }
+</script>

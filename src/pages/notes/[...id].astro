@@ -15,7 +15,7 @@ const stamp = formatDateTime(note.data.date);
 
 <Base title={stamp} tab="notes">
   <article>
-    <div class="prose note-text">
+    <div class="prose note-text" data-quote>
       <Content />
     </div>
     <time class="meta" datetime={note.data.date.toISOString()}>{stamp}</time>
