@@ -20,7 +20,7 @@ export const site = {
   // 加入主畫面：icon 名稱（留空就用 title）與手機上方狀態列的顏色。
   // icon 圖片用 npm run icons 產生，見 README。
   app: {
-    shortName: '',
+    shortName: '蘇同學',
     themeColor: '#f7f5f0',
   },
   // 字體：從 Google Fonts 載入，name 填 Google Fonts 上的字體名稱
