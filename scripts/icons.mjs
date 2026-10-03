@@ -18,9 +18,15 @@ const sizes = [
 ];
 
 mkdirSync('public/icons', { recursive: true });
+// 圖片完整縮放進正方形（不裁切），四周留 10% 空白
+const padding = 0.1;
 for (const [name, size] of sizes) {
-  await sharp(source, { density: 300 })
-    .resize(size, size, { fit: 'cover' })
+  const inner = Math.round(size * (1 - padding * 2));
+  const image = await sharp(source, { density: 300 })
+    .resize(inner, inner, { fit: 'contain', background: '#0000' })
+    .toBuffer();
+  await sharp({ create: { width: size, height: size, channels: 4, background } })
+    .composite([{ input: image, gravity: 'center' }])
     .flatten({ background })
     .png()
     .toFile(`public/icons/${name}`);
