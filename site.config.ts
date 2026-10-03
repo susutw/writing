@@ -17,6 +17,12 @@ export const site = {
     { key: 'notes', label: '短文', href: '/notes/' },
   ],
   footer: '',
+  // 加入主畫面：icon 名稱（留空就用 title）與手機上方狀態列的顏色。
+  // icon 圖片用 npm run icons 產生，見 README。
+  app: {
+    shortName: '',
+    themeColor: '#f7f5f0',
+  },
   // 字體：從 Google Fonts 載入，name 填 Google Fonts 上的字體名稱
   fonts: {
     // 全站內文
