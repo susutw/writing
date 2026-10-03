@@ -240,3 +240,12 @@ img {
   font-size: 1.05rem;
   line-height: 1.85;
 }
+
+/* 嵌入的播放器（Podcast、影片等） */
+.prose iframe {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  border: 0;
+  margin: 1.8em 0;
+}
