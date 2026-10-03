@@ -17,6 +17,14 @@ export function url(path: string) {
   return `${base}/${path.replace(/^\//, '')}`;
 }
 
+/** 把 podcast 單集網址轉成嵌入播放器網址；已經是嵌入網址就原樣使用 */
+export function podcastEmbed(episode: string) {
+  // SoundOn：https://player.soundon.fm/p/<節目>/episodes/<單集>
+  const soundon = episode.match(/player\.soundon\.fm\/p\/([\w-]+)\/episodes\/([\w-]+)/);
+  if (soundon) return `https://player.soundon.fm/embed/?podcast=${soundon[1]}&episode=${soundon[2]}`;
+  return episode;
+}
+
 /** 去掉 photos 資料夾 id 結尾的 /index */
 export function slug(id: string) {
   return id.replace(/\/index$/, '');

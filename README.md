@@ -82,6 +82,17 @@ date: 2026-10-03T21:40:00+08:00
 
 短文只需要 `date`。請寫完整時間與時區（`+08:00`），網站會依 `site.config.ts` 的時區顯示為 `2026.10.03 21:40`。
 
+### Podcast `content/podcast/*.md`（選用）
+
+```md
+---
+date: 2026-10-04
+episode: https://player.soundon.fm/p/節目ID/episodes/單集ID
+---
+```
+
+分頁只顯示播放器，不顯示標題文字。預設是關閉的，要在 `site.config.ts` 的 `tabs` 取消 Podcast 那一行的註解。SoundOn 可以直接貼單集頁面的網址，其他平台請貼嵌入播放器（iframe）的 `src` 網址。
+
 ### 草稿
 
 任何內容加上 `draft: true` 就不會發布。

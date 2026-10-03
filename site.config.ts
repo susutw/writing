@@ -9,12 +9,14 @@ export const site = {
   lang: 'zh-Hant',
   // 所有日期時間都以這個時區顯示
   timeZone: 'Asia/Taipei',
-  // 首頁顯示哪個分頁：'blog' | 'photos' | 'notes'
-  home: 'blog' as 'blog' | 'photos' | 'notes',
+  // 首頁顯示哪個分頁：'blog' | 'photos' | 'notes' | 'podcast'
+  home: 'blog' as 'blog' | 'photos' | 'notes' | 'podcast',
   tabs: [
     { key: 'blog', label: '文章', href: '/blog/' },
     { key: 'photos', label: '圖文', href: '/photos/' },
     { key: 'notes', label: '短文', href: '/notes/' },
+    // 想要 Podcast 分頁就取消下一行的註解
+    // { key: 'podcast', label: 'Podcast', href: '/podcast/' },
   ],
   footer: '',
   // 加入主畫面：icon 名稱（留空就用 title）與手機上方狀態列的顏色。

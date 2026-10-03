@@ -1,0 +1,35 @@
+---
+import { published, podcastEmbed } from '../lib';
+
+const episodes = await published('podcast');
+---
+
+{
+  episodes.length === 0 ? (
+    <p class="empty">還沒有節目。</p>
+  ) : (
+    <ul class="episodes">
+      {episodes.map((ep) => (
+        <li>
+          <iframe src={podcastEmbed(ep.data.episode)} title="Podcast 播放器" loading="lazy" />
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+<style>
+  .episodes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1.5rem;
+  }
+  iframe {
+    display: block;
+    width: 100%;
+    height: 140px;
+    border: 0;
+  }
+</style>

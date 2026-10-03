@@ -34,5 +34,15 @@ const notes = defineCollection({
   }),
 });
 
+// Podcast：content/podcast/<任意檔名>.md，貼上單集網址即可
+const podcast = defineCollection({
+  loader: glob({ pattern: ['**/*.md', '!**/_*'], base: './content/podcast' }),
+  schema: z.object({
+    date: z.coerce.date(),
+    episode: z.string().url(),
+    draft: z.boolean().default(false),
+  }),
+});
+
 // 檔名或資料夾名以 _ 開頭的會被略過，用來放範例或暫存。
-export const collections = { blog, photos, notes };
+export const collections = { blog, photos, notes, podcast };
