@@ -4,7 +4,7 @@ export const site = {
   // 顯示在標題下方，可以換行
   description: '寫一些日子、寫想法、寫新的發現。\n文字從單字堆積成文章，再變成你的獨一無二的輪廓。',
   // 頭貼：把圖片放在 public/ 資料夾，填上路徑；留空 '' 就不顯示
-  avatar: '/avatar.svg',
+  avatar: '/avatar.png',
   author: '蘇同學',
   lang: 'zh-Hant',
   // 所有日期時間都以這個時區顯示
