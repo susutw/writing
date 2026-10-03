@@ -1,0 +1,95 @@
+# 用 issue 發布短文：
+# repo 擁有者開的 issue，只要帶有 note label，內文就會存成 content/notes/ 裡的一則短文，
+# commit 後觸發部署，並關閉 issue。其他人開的 issue 不會被處理。
+name: Issue to note
+
+on:
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  contents: write
+  issues: write
+  actions: write
+  pages: read
+
+concurrency:
+  group: issue-to-note
+  cancel-in-progress: false
+
+env:
+  # 與 site.config.ts 的 timeZone 一致
+  TIME_ZONE: Asia/Taipei
+
+jobs:
+  publish:
+    if: >-
+      github.event.issue.user.login == github.repository_owner &&
+      contains(github.event.issue.labels.*.name, 'note')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Skip if already handled
+        id: state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.issue.number }}
+        run: |
+          # opened 與 labeled 可能同時觸發，已關閉的就不再處理
+          echo "state=$(gh issue view "$NUMBER" --json state --jq .state)" >> "$GITHUB_OUTPUT"
+
+      - name: Write note
+        if: steps.state.outputs.state == 'OPEN'
+        id: note
+        env:
+          BODY: ${{ github.event.issue.body }}
+          CREATED: ${{ github.event.issue.created_at }}
+        run: |
+          body="$(printf '%s' "$BODY" | tr -d '\r')"
+          if [ -z "$(printf '%s' "$body" | tr -d '[:space:]')" ]; then
+            echo "empty=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          slug="$(TZ="$TIME_ZONE" date -d "$CREATED" +%Y-%m-%d-%H%M)"
+          date="$(TZ="$TIME_ZONE" date -d "$CREATED" +%Y-%m-%dT%H:%M:%S%:z)"
+          file="content/notes/$slug.md"
+          n=2
+          while [ -e "$file" ]; do file="content/notes/$slug-$n.md"; n=$((n + 1)); done
+          mkdir -p content/notes
+          printf -- '---\ndate: %s\n---\n\n%s\n' "$date" "$body" > "$file"
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+          echo "slug=$(basename "$file" .md)" >> "$GITHUB_OUTPUT"
+          cat "$file"
+
+      - name: Commit and push
+        if: steps.note.outputs.file
+        env:
+          FILE: ${{ steps.note.outputs.file }}
+          NUMBER: ${{ github.event.issue.number }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$FILE"
+          git commit -m "Note from #$NUMBER"
+          for i in 1 2 3; do
+            git push && break
+            git pull --rebase
+          done
+
+      - name: Deploy, comment, close
+        if: steps.state.outputs.state == 'OPEN'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.issue.number }}
+          SLUG: ${{ steps.note.outputs.slug }}
+          EMPTY: ${{ steps.note.outputs.empty }}
+        run: |
+          if [ "$EMPTY" = "true" ]; then
+            gh issue comment "$NUMBER" --body "內文是空的，沒有發布。編輯內文後，移除再加回 note label 就會重新處理。"
+            exit 0
+          fi
+          # 用 GITHUB_TOKEN 推的 commit 不會觸發其他 workflow，所以手動觸發部署
+          gh workflow run deploy.yml --ref "${GITHUB_REF_NAME:-main}"
+          base="$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq .html_url 2>/dev/null || true)"
+          gh issue close "$NUMBER" --comment "已發布，約一分鐘後上線：${base%/}/notes/$SLUG/"
