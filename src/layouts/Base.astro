@@ -8,10 +8,9 @@ interface Props {
   title?: string;
   description?: string;
   tab?: string;
-  wide?: boolean;
 }
 
-const { title, description = site.description.replace(/\s*\n\s*/g, ' '), tab, wide = false } = Astro.props;
+const { title, description = site.description.replace(/\s*\n\s*/g, ' '), tab } = Astro.props;
 const pageTitle = title ? `${title} — ${site.title}` : site.title;
 const path = Astro.url.pathname;
 const current = tab ?? site.tabs.find((t) => path.startsWith(url(t.href)))?.key;
@@ -43,7 +42,7 @@ const fontVars = `--body-font: '${body.name}'; --notes-font: '${notes.name}';`;
     <link rel="stylesheet" href={fontsHref} />
   </head>
   <body>
-    <div class:list={['page', { wide }]}>
+    <div class="page">
       <header class="site-header">
         <div class="profile">
           {

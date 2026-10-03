@@ -5,7 +5,6 @@
   --line: #e2ded5;
   --accent: #2b2a28;
   --measure: 34rem;
-  --wide: 52rem;
   /* 字體名稱在 site.config.ts 設定，這裡是後備字體 */
   --fallback: 'Songti TC', 'Source Han Serif TC', 'PMingLiU', serif;
   --serif: var(--body-font), var(--fallback);
@@ -58,10 +57,6 @@ img {
   max-width: var(--measure);
   margin: 0 auto;
   padding: 4.5rem 1.25rem 3rem;
-}
-
-.page.wide {
-  max-width: var(--wide);
 }
 
 /* header */
