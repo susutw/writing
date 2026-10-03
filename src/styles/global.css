@@ -205,6 +205,8 @@ img {
 
 .prose img {
   margin: 2em 0;
+  /* 淡淡的細框，讓和底色相近的圖片（例如截圖）也看得出邊界 */
+  border: 1px solid var(--line);
 }
 
 .prose code {
