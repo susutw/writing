@@ -1,7 +1,7 @@
-# 用 issue 發布短文：
-# repo 擁有者開的 issue，只要帶有 note label，內文就會存成 content/notes/ 裡的一則短文，
+# 用 issue 發布圖文：
+# repo 擁有者開的 issue，只要帶有 photo label，內文中的照片與文字就會存成 content/photos/ 裡的一則圖文，
 # commit 後觸發部署，並關閉 issue。其他人開的 issue 不會被處理。
-name: Issue to note
+name: Issue to photo
 
 on:
   issues:
@@ -25,7 +25,7 @@ jobs:
   publish:
     if: >-
       github.event.issue.user.login == github.repository_owner &&
-      contains(github.event.issue.labels.*.name, 'note')
+      contains(github.event.issue.labels.*.name, 'photo')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -39,39 +39,36 @@ jobs:
           # opened 與 labeled 可能同時觸發，已關閉的就不再處理
           echo "state=$(gh issue view "$NUMBER" --json state --jq .state)" >> "$GITHUB_OUTPUT"
 
-      - name: Write note
+      - uses: actions/setup-node@v7
         if: steps.state.outputs.state == 'OPEN'
-        id: note
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        if: steps.state.outputs.state == 'OPEN'
+        run: npm ci
+
+      - name: Write photo post
+        if: steps.state.outputs.state == 'OPEN'
+        id: post
         env:
           BODY: ${{ github.event.issue.body }}
+          TITLE: ${{ github.event.issue.title }}
           CREATED: ${{ github.event.issue.created_at }}
-        run: |
-          body="$(printf '%s' "$BODY" | tr -d '\r')"
-          if [ -z "$(printf '%s' "$body" | tr -d '[:space:]')" ]; then
-            echo "empty=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          slug="$(TZ="$TIME_ZONE" date -d "$CREATED" +%Y-%m-%d-%H%M)"
-          date="$(TZ="$TIME_ZONE" date -d "$CREATED" +%Y-%m-%dT%H:%M:%S%:z)"
-          file="content/notes/$slug.md"
-          n=2
-          while [ -e "$file" ]; do file="content/notes/$slug-$n.md"; n=$((n + 1)); done
-          mkdir -p content/notes
-          printf -- '---\ndate: %s\n---\n\n%s\n' "$date" "$body" > "$file"
-          echo "file=$file" >> "$GITHUB_OUTPUT"
-          echo "slug=$(basename "$file" .md)" >> "$GITHUB_OUTPUT"
-          cat "$file"
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/issue-to-photo.mjs
 
       - name: Commit and push
-        if: steps.note.outputs.file
+        if: steps.post.outputs.dir
         env:
-          FILE: ${{ steps.note.outputs.file }}
+          DIR: ${{ steps.post.outputs.dir }}
           NUMBER: ${{ github.event.issue.number }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$FILE"
-          git commit -m "Note from #$NUMBER"
+          git add "$DIR"
+          git commit -m "Photo post from #$NUMBER"
           for i in 1 2 3; do
             git push && break
             git pull --rebase
@@ -82,14 +79,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           NUMBER: ${{ github.event.issue.number }}
-          SLUG: ${{ steps.note.outputs.slug }}
-          EMPTY: ${{ steps.note.outputs.empty }}
+          SLUG: ${{ steps.post.outputs.slug }}
+          ERROR: ${{ steps.post.outputs.error }}
         run: |
-          if [ "$EMPTY" = "true" ]; then
-            gh issue comment "$NUMBER" --body "內文是空的，沒有發布。編輯內文後，移除再加回 note label 就會重新處理。"
+          if [ -n "$ERROR" ]; then
+            gh issue comment "$NUMBER" --body "$ERROR"
             exit 0
           fi
           # 用 GITHUB_TOKEN 推的 commit 不會觸發其他 workflow，所以手動觸發部署
           gh workflow run deploy.yml --ref "${GITHUB_REF_NAME:-main}"
           base="$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq .html_url 2>/dev/null || true)"
-          gh issue close "$NUMBER" --comment "已發布，約一分鐘後上線：${base%/}/notes/$SLUG/"
+          gh issue close "$NUMBER" --comment "已發布，約一分鐘後上線：${base%/}/photos/$SLUG/"
