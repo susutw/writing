@@ -3,19 +3,16 @@
 # commit 後觸發部署，並關閉 issue。其他人開的 issue 不會被處理。
 name: Issue to note
 
+# 只在加上 label 時觸發（開 issue 時帶著 label 也算），一個 issue 只會跑一次。
 on:
   issues:
-    types: [opened, labeled]
+    types: [labeled]
 
 permissions:
   contents: write
   issues: write
   actions: write
   pages: read
-
-concurrency:
-  group: issue-publish
-  cancel-in-progress: false
 
 env:
   # 與 site.config.ts 的 timeZone 一致
@@ -24,8 +21,8 @@ env:
 jobs:
   publish:
     if: >-
-      github.event.issue.user.login == github.repository_owner &&
-      contains(github.event.issue.labels.*.name, 'note')
+      github.event.label.name == 'note' &&
+      github.event.issue.user.login == github.repository_owner
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -36,7 +33,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           NUMBER: ${{ github.event.issue.number }}
         run: |
-          # opened 與 labeled 可能同時觸發，已關閉的就不再處理
+          # 已經關閉的 issue（例如發布後又被加上 label）不再處理
           echo "state=$(gh issue view "$NUMBER" --json state --jq .state)" >> "$GITHUB_OUTPUT"
 
       - name: Write note
