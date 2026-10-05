@@ -9,15 +9,21 @@ export const site = {
   lang: 'zh-Hant',
   // 所有日期時間都以這個時區顯示
   timeZone: 'Asia/Taipei',
-  // 首頁顯示哪個分頁：'blog' | 'photos' | 'notes' | 'podcast'
-  home: 'blog' as 'blog' | 'photos' | 'notes' | 'podcast',
+  // 首頁顯示哪個分頁：'blog' | 'photos' | 'notes' | 'podcast' | 'trips'
+  home: 'blog' as 'blog' | 'photos' | 'notes' | 'podcast' | 'trips',
   tabs: [
     { key: 'blog', label: '文章', href: '/blog/' },
     { key: 'photos', label: '圖文', href: '/photos/' },
     { key: 'notes', label: '短文', href: '/notes/' },
     { key: 'podcast', label: 'Podcast', href: '/podcast/' },
+    { key: 'trips', label: '行旅', href: '/trips/' },
   ],
   footer: '',
+  // 行旅分頁：第一層每次旅行的圖片呈現方式
+  // 'strip' 文字下方一排小方圖（最多四張）、'cover' 文字下方一張大封面、'thumb' 文字右側一張小方圖
+  trips: {
+    listStyle: 'strip' as 'strip' | 'cover' | 'thumb',
+  },
   // 加入主畫面：icon 名稱（留空就用 title）與手機上方狀態列的顏色。
   // icon 圖片用 npm run icons 產生，見 README。
   app: {

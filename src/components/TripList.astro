@@ -1,0 +1,159 @@
+---
+import { Image } from 'astro:assets';
+import { site } from '../../site.config';
+import { getTrips, formatRange, url } from '../lib';
+
+const trips = await getTrips();
+const style = site.trips?.listStyle ?? 'strip';
+
+// 依出發年份分組
+const years: [string, typeof trips][] = [];
+for (const trip of trips) {
+  const year = formatRange(trip.start, trip.start, trip.timeZone).slice(0, 4);
+  const last = years.at(-1);
+  if (last && last[0] === year) last[1].push(trip);
+  else years.push([year, [trip]]);
+}
+---
+
+{
+  trips.length === 0 ? (
+    <p class="empty">還沒有旅行。</p>
+  ) : (
+    <div class:list={['trips', `style-${style}`]}>
+      {years.map(([year, list]) => (
+        <section>
+          <h2 class="year">{year}</h2>
+          <ol class="timeline">
+            {list.map((trip) => (
+              <li>
+                <a href={url(`/trips/${trip.slug}/`)}>
+                  <div class="text">
+                    <p class="meta">
+                      {formatRange(trip.start, trip.end, trip.timeZone)} · {trip.days} 天
+                    </p>
+                    <p class="title">{trip.entry.data.title}</p>
+                    {trip.entry.data.summary && <p class="summary">{trip.entry.data.summary}</p>}
+                  </div>
+                  {style === 'thumb' && trip.photos[0] && (
+                    <Image class="thumb" src={trip.photos[0]} alt="" width={240} height={240} fit="cover" loading="lazy" />
+                  )}
+                  {style === 'cover' && trip.photos[0] && (
+                    <Image class="cover" src={trip.photos[0]} alt="" width={1000} height={600} fit="cover" loading="lazy" />
+                  )}
+                  {style === 'strip' && trip.photos.length > 0 && (
+                    <div class="strip">
+                      {trip.photos.slice(0, 4).map((photo) => (
+                        <Image src={photo} alt="" width={300} height={300} fit="cover" loading="lazy" />
+                      ))}
+                    </div>
+                  )}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ))}
+    </div>
+  )
+}
+
+<style>
+  section + section {
+    margin-top: 2.5rem;
+  }
+  .year {
+    margin: 0 0 1.25rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    font-variant-numeric: tabular-nums;
+  }
+  .timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 1.5rem;
+    border-left: 1px solid var(--line);
+  }
+  li {
+    position: relative;
+  }
+  li + li {
+    margin-top: 2.25rem;
+  }
+  /* 時間軸上的點 */
+  li::before {
+    content: '';
+    position: absolute;
+    left: calc(-1.5rem - 4px);
+    top: 0.55rem;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--fg);
+  }
+  a {
+    display: block;
+  }
+  .meta {
+    margin: 0;
+  }
+  .title {
+    margin: 0.15rem 0 0;
+    font-size: 1.05rem;
+    transition: color 0.2s;
+  }
+  a:hover .title {
+    color: var(--muted);
+  }
+  .summary {
+    margin: 0.25rem 0 0;
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+  img {
+    background: var(--line);
+    transition: opacity 0.3s;
+  }
+  a:hover img {
+    opacity: 0.85;
+  }
+
+  /* 右側小方圖 */
+  .style-thumb a {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.25rem;
+  }
+  .style-thumb .text {
+    flex: 1;
+    min-width: 0;
+  }
+  .thumb {
+    flex-shrink: 0;
+    width: 76px;
+    height: 76px;
+    object-fit: cover;
+  }
+
+  /* 大封面 */
+  .cover {
+    width: 100%;
+    aspect-ratio: 5 / 3;
+    object-fit: cover;
+    margin-top: 0.9rem;
+  }
+
+  /* 一排小方圖 */
+  .strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    margin-top: 0.9rem;
+  }
+  .strip img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+  }
+</style>

@@ -4,6 +4,7 @@ import BlogList from '../components/BlogList.astro';
 import PhotoGrid from '../components/PhotoGrid.astro';
 import NoteFeed from '../components/NoteFeed.astro';
 import PodcastList from '../components/PodcastList.astro';
+import TripList from '../components/TripList.astro';
 import { site } from '../../site.config';
 ---
 
@@ -12,4 +13,5 @@ import { site } from '../../site.config';
   {site.home === 'photos' && <PhotoGrid />}
   {site.home === 'notes' && <NoteFeed />}
   {site.home === 'podcast' && <PodcastList />}
+  {site.home === 'trips' && <TripList />}
 </Base>

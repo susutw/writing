@@ -1,0 +1,172 @@
+---
+import { render } from 'astro:content';
+import { Image, getImage } from 'astro:assets';
+import Base from '../../layouts/Base.astro';
+import {
+  getTrips,
+  formatRange,
+  formatTime,
+  formatMonthDay,
+  dayKey,
+  daysBetween,
+  url,
+  type Trip,
+} from '../../lib';
+
+export async function getStaticPaths() {
+  const trips = await getTrips();
+  return trips.map((trip) => ({ params: { slug: trip.slug }, props: { trip } }));
+}
+
+const { trip } = Astro.props as { trip: Trip };
+const { entry, timeZone } = trip;
+const { Content: Intro } = await render(entry);
+const startKey = dayKey(trip.start, timeZone);
+
+// 依當地日期把片刻分成一天一天
+const days: { n: number; label: string; items: { moment: Trip['moments'][number]; Content: any; bg?: string }[] }[] = [];
+for (const moment of trip.moments) {
+  const key = dayKey(moment.data.date, timeZone);
+  const { Content } = await render(moment);
+  // 分享引文圖片時的底圖（這個片刻的第一張照片）
+  const bg = moment.data.images[0]
+    ? (await getImage({ src: moment.data.images[0], width: 1440, format: 'jpg' })).src
+    : undefined;
+  const n = daysBetween(startKey, key) + 1;
+  const last = days.at(-1);
+  if (last && last.n === n) last.items.push({ moment, Content, bg });
+  else days.push({ n, label: formatMonthDay(moment.data.date, timeZone), items: [{ moment, Content, bg }] });
+}
+const cover = trip.photos[0];
+---
+
+<Base title={entry.data.title} description={entry.data.summary}>
+  <article>
+    {cover && <Image class="cover" src={cover} alt="" width={1200} loading="eager" />}
+    <header>
+      <h1>{entry.data.title}</h1>
+      <p class="meta">{formatRange(trip.start, trip.end, timeZone)} · {trip.days} 天</p>
+      {entry.data.summary && <p class="summary">{entry.data.summary}</p>}
+    </header>
+
+    <div class="prose intro" data-quote>
+      <Intro />
+    </div>
+
+    {
+      days.map((day) => (
+        <section class="day">
+          <h2>
+            Day {day.n}
+            <span class="meta">{day.label}</span>
+          </h2>
+          <ol class="timeline">
+            {day.items.map(({ moment, Content, bg }) => (
+              <li>
+                <p class="when">
+                  <span class="meta">{formatTime(moment.data.date, timeZone)}</span>
+                  {moment.data.place && <span class="place">{moment.data.place}</span>}
+                </p>
+                {moment.data.images.length > 0 && (
+                  <div class="images">
+                    {moment.data.images.map((img) => (
+                      <Image src={img} alt={moment.data.place ?? ''} width={1000} loading="lazy" />
+                    ))}
+                  </div>
+                )}
+                <div class="prose note-text" data-quote data-quote-bg={bg}>
+                  <Content />
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ))
+    }
+  </article>
+  <a class="back meta" href={url('/trips/')}>返回</a>
+</Base>
+
+<style>
+  .cover {
+    width: 100%;
+    margin-bottom: 2rem;
+  }
+  header {
+    margin-bottom: 2rem;
+  }
+  h1 {
+    font-size: 1.35rem;
+    font-weight: 600;
+    line-height: 1.5;
+    margin: 0 0 0.4rem;
+  }
+  header .meta {
+    margin: 0;
+  }
+  .summary {
+    margin: 0.6rem 0 0;
+    color: var(--muted);
+  }
+  .intro:empty {
+    display: none;
+  }
+  .day {
+    margin-top: 3rem;
+  }
+  .day h2 {
+    display: flex;
+    align-items: baseline;
+    gap: 0.9rem;
+    margin: 0 0 1.25rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+  }
+  .timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 1.5rem;
+    border-left: 1px solid var(--line);
+  }
+  li {
+    position: relative;
+  }
+  li + li {
+    margin-top: 2.25rem;
+  }
+  li::before {
+    content: '';
+    position: absolute;
+    left: calc(-1.5rem - 4px);
+    top: 0.65rem;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--fg);
+  }
+  .when {
+    display: flex;
+    align-items: baseline;
+    gap: 0.8rem;
+    margin: 0 0 0.6rem;
+  }
+  .place {
+    font-weight: 600;
+  }
+  .images {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 0.9rem;
+  }
+  .images img {
+    width: 100%;
+  }
+  .back {
+    display: inline-block;
+    margin-top: 4rem;
+  }
+  .back:hover {
+    color: var(--fg);
+  }
+</style>

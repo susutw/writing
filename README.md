@@ -93,6 +93,21 @@ episode: https://player.soundon.fm/p/節目ID/episodes/單集ID
 
 分頁只顯示播放器，不顯示標題文字。預設是關閉的，要在 `site.config.ts` 的 `tabs` 取消 Podcast 那一行的註解。SoundOn 可以直接貼單集頁面的網址，其他平台請貼嵌入播放器（iframe）的 `src` 網址。
 
+### 行旅 `content/trips/<旅行>/`（選用）
+
+時間軸式的旅行紀錄。第一層依年份列出每次旅行，點進去是那次旅行一天一天的片刻。
+
+```
+content/trips/
+  2026-09-kyoto/
+    index.md                      旅行：標題、摘要、封面、時區
+    moments/
+      2026-09-12-1900.md          一個片刻一個檔案
+      kamogawa.jpg
+```
+
+`content/trips/_example/` 裡有完整的欄位說明。分頁預設是關閉的，要在 `site.config.ts` 的 `tabs` 取消行旅那一行的註解；第一層的圖片呈現方式可以用 `trips.listStyle` 切換（`strip`、`cover`、`thumb`）。
+
 ### 草稿
 
 任何內容加上 `draft: true` 就不會發布。
