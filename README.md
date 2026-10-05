@@ -106,6 +106,14 @@ content/trips/
       kamogawa.jpg
 ```
 
+**匯入過去的旅行**：把一趟旅行的照片放進一個資料夾（從「照片」App 匯出時保留原始資訊），執行
+
+```sh
+npm run import-trip -- ~/Desktop/京都 京都
+```
+
+會依拍攝時間排序，把 30 分鐘內拍的照片合成一個片刻，自動建立整趟旅行；時區也會從照片判斷。照片會縮圖並移除 EXIF（含 GPS）。文字與地點可以之後再補。可加 `--gap 60` 調整合併的分鐘數，或 `--tz Asia/Tokyo` 指定時區。HEIC 照片需要在 macOS 上執行。
+
 `content/trips/_example/` 裡有完整的欄位說明。分頁預設是關閉的，要在 `site.config.ts` 的 `tabs` 取消行旅那一行的註解；第一層的圖片呈現方式可以用 `trips.listStyle` 切換（`strip`、`cover`、`thumb`）。
 
 ### 草稿
