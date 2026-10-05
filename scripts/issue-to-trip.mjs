@@ -1,6 +1,7 @@
 // 把 issue 轉成旅行中的一個片刻，加進 content/trips/<旅行>/moments/。
 // issue 標題是旅行名稱：同名、而且日期接近（前後七天內）的旅行會放在一起，找不到就建立新的旅行。
-// 內文第一行可以用 @ 寫地點與時間，補記過去的旅行時使用：
+// 用「行旅」表單開的 issue，會讀表單裡的旅行名稱、日期與時間、地點、照片與文字。
+// 沒有用表單時，issue 標題是旅行名稱，內文第一行可以用 @ 寫地點與時間：
 //   @ 鴨川
 //   @ 14:30 鴨川
 //   @ 2023-05-02 14:30 清水寺
@@ -84,17 +85,37 @@ function readTrips() {
     });
 }
 
-const title = TITLE.trim();
-if (!title || title === DEFAULT_TITLE) fail('請把 issue 標題改成這次旅行的名稱，例如「京都」，再移除並加回 trip label。');
-
-// 內文：去掉範本註解，取出 @ 那一行與照片
-let text = BODY.replace(/\r/g, '').replace(/<!--[\s\S]*?-->/g, '').trim();
-let meta = null;
-const firstLine = text.split('\n')[0];
-if (firstLine.startsWith('@')) {
-  meta = firstLine.slice(1).trim();
-  text = text.slice(firstLine.length);
+// 表單送出的內文是「### 欄位名稱」加上內容，沒填的欄位是 _No response_
+function readForm(body) {
+  const fields = {};
+  const parts = body.split(/^### (.+)$/m);
+  for (let i = 1; i < parts.length; i += 2) {
+    const value = parts[i + 1].trim();
+    fields[parts[i].trim()] = value === '_No response_' ? '' : value;
+  }
+  return fields;
 }
+
+let body = BODY.replace(/\r/g, '').replace(/<!--[\s\S]*?-->/g, '').trim();
+let title = TITLE.trim();
+let text;
+let meta = null;
+const form = readForm(body);
+if ('旅行名稱' in form) {
+  title = form['旅行名稱'];
+  meta = [form['日期與時間'], form['地點']].filter(Boolean).join(' ') || null;
+  text = form['照片與文字'] ?? '';
+} else {
+  // 沒有用表單：取出內文第一行的 @
+  text = body;
+  const firstLine = text.split('\n')[0];
+  if (firstLine.startsWith('@')) {
+    meta = firstLine.slice(1).trim();
+    text = text.slice(firstLine.length);
+  }
+}
+if (!title || title === DEFAULT_TITLE) fail('請填上旅行名稱，例如「京都」。編輯後移除並加回 trip label 就會重新處理。');
+
 const urls = [];
 text = text.replace(/!\[[^\]]*\]\((\S+?)(?:\s+"[^"]*")?\)/g, (_, url) => (urls.push(url), ''));
 text = text.replace(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*\/?>/gi, (_, url) => (urls.push(url), ''));
@@ -104,7 +125,7 @@ if (!text && urls.length === 0) fail('內文是空的，沒有發布。寫好內
 let place = '';
 let when = null; // { y, mo, d, h, mi }，沒有寫就用送出的時間
 if (meta) {
-  const m = meta.match(/^(?:(\d{4})[-./](\d{1,2})[-./](\d{1,2}))?\s*(?:(\d{1,2}):(\d{2}))?\s*(.*)$/);
+  const m = meta.replace(/：/g, ':').match(/^(?:(\d{4})[-./](\d{1,2})[-./](\d{1,2}))?\s*(?:(\d{1,2}):(\d{2}))?\s*(.*)$/);
   place = m[6].trim();
   if (m[1] || m[4]) when = { date: m[1] ? [+m[1], +m[2], +m[3]] : null, time: m[4] ? [+m[4], +m[5]] : null };
 }

@@ -1,0 +1,30 @@
+name: 行旅
+description: 記錄旅行中的一個片刻，送出後會加進那次旅行的時間線
+title: 行旅
+labels: [trip]
+body:
+  - type: input
+    id: trip
+    attributes:
+      label: 旅行名稱
+      description: 同名而且日期接近（前後七天內）的片刻，會放進同一次旅行
+      placeholder: 京都
+    validations:
+      required: true
+  - type: input
+    id: when
+    attributes:
+      label: 日期與時間
+      description: 旅行途中可以留空，會用送出的時間。補記過去的旅行時再填，只填日期會放在當天中午。
+      placeholder: 2023-05-02 14:30
+  - type: input
+    id: place
+    attributes:
+      label: 地點
+      description: 選填
+      placeholder: 鴨川
+  - type: textarea
+    id: content
+    attributes:
+      label: 照片與文字
+      description: 照片直接貼上（可以多張），文字寫在照片下面。至少要有照片或文字其中一樣。
