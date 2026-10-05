@@ -1,0 +1,96 @@
+# 用 issue 記錄旅行：
+# repo 擁有者開的 issue，加上 trip label 後，內文中的照片與文字會成為 content/trips/ 裡某次旅行的一個片刻，
+# commit 後觸發部署，並關閉 issue。其他人開的 issue 不會被處理。
+name: Issue to trip
+
+# 只在加上 label 時觸發（開 issue 時帶著 label 也算），一個 issue 只會跑一次。
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+  actions: write
+  pages: read
+
+env:
+  # 與 site.config.ts 的 timeZone 一致
+  TIME_ZONE: Asia/Taipei
+
+jobs:
+  publish:
+    if: >-
+      github.event.label.name == 'trip' &&
+      github.event.issue.user.login == github.repository_owner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Skip if already handled
+        id: state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.issue.number }}
+        run: |
+          # 已經關閉的 issue（例如發布後又被加上 label）不再處理
+          echo "state=$(gh issue view "$NUMBER" --json state --jq .state)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v7
+        if: steps.state.outputs.state == 'OPEN'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        if: steps.state.outputs.state == 'OPEN'
+        run: npm ci
+
+      - name: Write trip moment
+        if: steps.state.outputs.state == 'OPEN'
+        id: post
+        env:
+          BODY: ${{ github.event.issue.body }}
+          TITLE: ${{ github.event.issue.title }}
+          CREATED: ${{ github.event.issue.created_at }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/issue-to-trip.mjs
+
+      - name: Commit and push
+        if: steps.post.outputs.dir
+        env:
+          DIR: ${{ steps.post.outputs.dir }}
+          NUMBER: ${{ github.event.issue.number }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$DIR"
+          git commit -m "Trip moment from #$NUMBER"
+          for i in 1 2 3; do
+            git push && break
+            git pull --rebase
+          done
+
+      - name: Deploy, comment, close
+        if: steps.state.outputs.state == 'OPEN'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.issue.number }}
+          SLUG: ${{ steps.post.outputs.slug }}
+          ERROR: ${{ steps.post.outputs.error }}
+          TITLE: ${{ steps.post.outputs.title }}
+          NEW: ${{ steps.post.outputs.new }}
+        run: |
+          if [ -n "$ERROR" ]; then
+            gh issue comment "$NUMBER" --body "$ERROR"
+            exit 0
+          fi
+          # 用 GITHUB_TOKEN 推的 commit 不會觸發其他 workflow，所以手動觸發部署
+          gh workflow run deploy.yml --ref "${GITHUB_REF_NAME:-main}"
+          base="$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq .html_url 2>/dev/null || true)"
+          if [ -n "$NEW" ]; then
+            note="已建立新的旅行「$TITLE」。之後可以在 content/trips/$SLUG/index.md 補上摘要、封面與時區（例如 timeZone: Asia/Tokyo）。"
+          else
+            note="已加進「$TITLE」。"
+          fi
+          gh issue close "$NUMBER" --comment "$note 約一分鐘後上線：${base%/}/trips/$SLUG/"
